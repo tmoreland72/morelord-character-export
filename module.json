@@ -1,0 +1,36 @@
+{
+  "id": "morelord-character-export",
+  "title": "Morelord Character Export",
+  "description": "Exports D&D 5e character actors to a portable JSON format for the Morelord Character Manager.",
+  "version": "0.3.0",
+  "authors": [
+    {
+      "name": "Morelord Gaming"
+    }
+  ],
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14",
+    "maximum": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "4.0.0",
+          "verified": "5.3.3"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "url": "https://github.com/morelordgaming/morelord-character-export",
+  "manifest": "https://github.com/morelordgaming/morelord-character-export/releases/latest/download/module.json",
+  "download": "https://github.com/morelordgaming/morelord-character-export/releases/download/v0.3.0/morelord-character-export.zip",
+  "license": "LICENSE",
+  "readme": "README.md"
+}
