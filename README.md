@@ -118,3 +118,45 @@ Format version `3` stores all images once and references them by asset ID:
 ```
 
 The raw Actor and embedded Item records retain their original Foundry image paths. The Character Manager should resolve portable images through `assets.references` and `assets.images`, then use the original path or a generic icon only as a fallback.
+
+## Installation from Foundry
+
+In Foundry VTT Setup, open **Add-on Modules**, choose **Install Module**, and paste this manifest URL:
+
+```text
+https://github.com/morelordgaming/morelord-character-export/releases/latest/download/module.json
+```
+
+After installation, enable **Morelord Character Export** under **Manage Modules** in a D&D 5e world.
+
+Previous versions are available from the repository's GitHub Releases page.
+
+## Creating a release
+
+The release workflow requires:
+
+- Git
+- GitHub CLI (`gh`)
+- an authenticated GitHub CLI session (`gh auth login`)
+- a clean Git working tree
+
+From PowerShell in the repository root, publish a release with:
+
+```powershell
+.\release.ps1 -Version 0.3.1
+```
+
+The script:
+
+1. updates `module.json` with the requested version and version-specific download URL;
+2. writes and validates `module.json` as UTF-8 without a byte-order mark;
+3. builds `release/morelord-character-export.zip` with `module.json` at the ZIP root;
+4. copies the standalone release manifest to `release/module.json`;
+5. commits the version change, creates and pushes the Git tag;
+6. publishes both assets to a GitHub Release.
+
+To validate and build the package without changing Git or publishing a release:
+
+```powershell
+.\release.ps1 -Version 0.3.1 -BuildOnly
+```
