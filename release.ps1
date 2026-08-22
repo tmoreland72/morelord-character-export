@@ -1,249 +1,864 @@
 param(
-    [Parameter(Mandatory = $true)]
-    [ValidatePattern('^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$')]
     [string]$Version,
-
-    [Parameter(Mandatory = $false)]
-    [string]$ReleaseNotes,
-
-    [Parameter(Mandatory = $false)]
-    [switch]$Draft,
-
-    [Parameter(Mandatory = $false)]
-    [switch]$Prerelease,
-
-    [Parameter(Mandatory = $false)]
-    [switch]$BuildOnly
+    [string]$CommitMessage
 )
 
 $ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
+
+$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 $ModuleId = "morelord-character-export"
-$GitHubRepository = "morelordgaming/morelord-character-export"
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$GitHubOwner = "tmoreland72"
+$GitHubRepo = "morelord-character-export"
+
+$ArchiveName = "$ModuleId.zip"
+$ArchivePath = Join-Path $ProjectRoot $ArchiveName
 $ManifestPath = Join-Path $ProjectRoot "module.json"
-$ReleaseDirectory = Join-Path $ProjectRoot "release"
-$StagingDirectory = Join-Path $ReleaseDirectory $ModuleId
-$ZipPath = Join-Path $ReleaseDirectory "$ModuleId.zip"
-$ReleaseManifestPath = Join-Path $ReleaseDirectory "module.json"
 
-$Version = $Version.TrimStart("v")
-$Tag = "v$Version"
 
-function Assert-Command {
-    param([Parameter(Mandatory = $true)][string]$Name)
+function Show-Usage {
 
-    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
-        throw "Required command '$Name' was not found in PATH."
+    Write-Host ""
+    Write-Host "Morelord Character Export - Release Script" -ForegroundColor Cyan
+    Write-Host ""
+
+    Write-Host "Syntax:" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  .\release.ps1 -Version <version> [-CommitMessage <message>]"
+    Write-Host ""
+
+    Write-Host "Examples:" -ForegroundColor Yellow
+    Write-Host ""
+
+    Write-Host '  .\release.ps1 -Version 0.1.4'
+    Write-Host ""
+
+    Write-Host '  .\release.ps1 -Version 0.1.5 -CommitMessage "Release v0.1.5"'
+    Write-Host ""
+
+    Write-Host "The script will:" -ForegroundColor Yellow
+    Write-Host ""
+
+    Write-Host "  1. Update the version in module.json"
+    Write-Host "  2. Update the version-specific Foundry download URL"
+    Write-Host "  3. Ensure module.json is UTF-8 without BOM"
+    Write-Host "  4. Build the Foundry module ZIP"
+    Write-Host "  5. Verify the ZIP and embedded module.json"
+    Write-Host "  6. Commit and push the source changes"
+    Write-Host "  7. Create and push a Git tag"
+    Write-Host "  8. Create a GitHub Release"
+    Write-Host "  9. Upload the ZIP to the GitHub Release"
+    Write-Host ""
+}
+
+
+function Assert-CommandExists {
+
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Command
+    )
+
+    if (
+        -not (
+            Get-Command `
+                $Command `
+                -ErrorAction SilentlyContinue
+        )
+    ) {
+        throw "Required command '$Command' was not found."
     }
 }
 
-function Write-Utf8NoBom {
+
+function Ensure-Utf8NoBom {
+
     param(
-        [Parameter(Mandatory = $true)][string]$Path,
-        [Parameter(Mandatory = $true)][string]$Content
+        [Parameter(Mandatory = $true)]
+        [string]$Path
     )
 
-    $Encoding = [System.Text.UTF8Encoding]::new($false)
-    [System.IO.File]::WriteAllText($Path, $Content, $Encoding)
-}
+    $Bytes =
+        [System.IO.File]::ReadAllBytes(
+            $Path
+        )
 
-function Assert-NoUtf8Bom {
-    param([Parameter(Mandatory = $true)][string]$Path)
+    $HasBom =
+        $Bytes.Length -ge 3 -and
+        $Bytes[0] -eq 0xEF -and
+        $Bytes[1] -eq 0xBB -and
+        $Bytes[2] -eq 0xBF
 
-    $Bytes = [System.IO.File]::ReadAllBytes($Path)
+    if ($HasBom) {
+
+        Write-Host `
+            "UTF-8 BOM detected in $Path. Removing it..." `
+            -ForegroundColor Yellow
+
+        $Text =
+            [System.IO.File]::ReadAllText(
+                $Path
+            )
+
+        $Utf8NoBom =
+            New-Object System.Text.UTF8Encoding(
+                $false
+            )
+
+        [System.IO.File]::WriteAllText(
+            $Path,
+            $Text,
+            $Utf8NoBom
+        )
+    }
+
+    #
+    # Verify again after any correction.
+    #
+
+    $Bytes =
+        [System.IO.File]::ReadAllBytes(
+            $Path
+        )
+
     if (
         $Bytes.Length -ge 3 -and
         $Bytes[0] -eq 0xEF -and
         $Bytes[1] -eq 0xBB -and
         $Bytes[2] -eq 0xBF
     ) {
-        throw "$Path contains a UTF-8 BOM. Foundry manifests must be UTF-8 without BOM."
+        throw "Unable to remove UTF-8 BOM from '$Path'."
     }
+
+    if (
+        $Bytes.Length -eq 0 -or
+        $Bytes[0] -ne 0x7B
+    ) {
+        throw "Manifest '$Path' does not begin with '{'."
+    }
+
+    Write-Host `
+        "module.json encoding verified: UTF-8 without BOM." `
+        -ForegroundColor Green
 }
 
-function Assert-CleanGitWorkingTree {
-    $Status = git -C $ProjectRoot status --porcelain
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to read Git status."
-    }
 
-    if ($Status) {
-        throw "The Git working tree is not clean. Commit or stash current changes before creating a release."
-    }
-}
+#
+# No version: show help and exit.
+#
 
-function Assert-ZipLayout {
-    param([Parameter(Mandatory = $true)][string]$Path)
-
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $Archive = [System.IO.Compression.ZipFile]::OpenRead($Path)
-
-    try {
-        $Names = @($Archive.Entries | ForEach-Object { $_.FullName.Replace('\\', '/') })
-
-        if ($Names -notcontains "module.json") {
-            throw "The release ZIP does not contain module.json at its root."
-        }
-
-        if ($Names -notcontains "scripts/main.js") {
-            throw "The release ZIP does not contain scripts/main.js."
-        }
-
-        if ($Names | Where-Object { $_ -like "$ModuleId/*" }) {
-            throw "The release ZIP contains an extra $ModuleId directory. Module files must be at the ZIP root."
-        }
-    }
-    finally {
-        $Archive.Dispose()
-    }
-}
-
-if (-not (Test-Path $ManifestPath)) {
-    throw "module.json was not found at $ManifestPath"
-}
-
-Assert-Command -Name "git"
-
-if (-not $BuildOnly) {
-    Assert-Command -Name "gh"
-    Assert-CleanGitWorkingTree
-
-    gh auth status | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "GitHub CLI is not authenticated. Run: gh auth login"
-    }
-
-    git -C $ProjectRoot rev-parse --is-inside-work-tree | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "$ProjectRoot is not a Git repository."
-    }
-
-    git -C $ProjectRoot remote get-url origin | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "The Git repository does not have an origin remote."
-    }
-
-    git -C $ProjectRoot fetch origin --tags
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to fetch Git tags from origin."
-    }
-
-    $ExistingTag = git -C $ProjectRoot tag --list $Tag
-    if ($ExistingTag) {
-        throw "Git tag $Tag already exists."
-    }
-
-    gh release view $Tag --repo $GitHubRepository 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        throw "GitHub release $Tag already exists."
-    }
-}
-
-$Manifest = Get-Content $ManifestPath -Raw | ConvertFrom-Json
-$Manifest.version = $Version
-$Manifest.url = "https://github.com/$GitHubRepository"
-$Manifest.manifest = "https://github.com/$GitHubRepository/releases/latest/download/module.json"
-$Manifest.download = "https://github.com/$GitHubRepository/releases/download/$Tag/$ModuleId.zip"
-
-$ManifestJson = $Manifest | ConvertTo-Json -Depth 100
-Write-Utf8NoBom -Path $ManifestPath -Content ($ManifestJson + [Environment]::NewLine)
-
-# Confirm the generated manifest parses and does not contain a UTF-8 BOM.
-Get-Content $ManifestPath -Raw | ConvertFrom-Json | Out-Null
-Assert-NoUtf8Bom -Path $ManifestPath
-
-if (Test-Path $ReleaseDirectory) {
-    Remove-Item $ReleaseDirectory -Recurse -Force
-}
-
-New-Item $StagingDirectory -ItemType Directory -Force | Out-Null
-
-$IncludedFiles = @(
-    "module.json",
-    "README.md",
-    "LICENSE",
-    "scripts"
-)
-
-foreach ($Item in $IncludedFiles) {
-    $Source = Join-Path $ProjectRoot $Item
-    if (-not (Test-Path $Source)) {
-        throw "Required release item was not found: $Source"
-    }
-
-    Copy-Item $Source (Join-Path $StagingDirectory $Item) -Recurse -Force
-}
-
-Compress-Archive -Path (Join-Path $StagingDirectory "*") -DestinationPath $ZipPath -Force
-Copy-Item $ManifestPath $ReleaseManifestPath -Force
-Assert-NoUtf8Bom -Path $ReleaseManifestPath
-Assert-ZipLayout -Path $ZipPath
-
-Write-Host "Built Morelord Character Export $Tag" -ForegroundColor Green
-Write-Host "ZIP:      $ZipPath"
-Write-Host "Manifest: $ReleaseManifestPath"
-
-if ($BuildOnly) {
-    Write-Host "Build-only mode complete. No Git commit, tag, push, or GitHub release was created." -ForegroundColor Yellow
+if (
+    [string]::IsNullOrWhiteSpace(
+        $Version
+    )
+) {
+    Show-Usage
     exit 0
 }
 
-# Commit the versioned manifest, then tag and push the exact release commit.
-git -C $ProjectRoot add module.json
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to stage module.json."
+
+#
+# Validate semantic version format.
+#
+
+if (
+    $Version -notmatch '^\d+\.\d+\.\d+$'
+) {
+    Write-Host ""
+    Write-Host "ERROR: Invalid version format." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Use semantic version format, for example:"
+    Write-Host ""
+    Write-Host "  0.1.4"
+    Write-Host "  1.0.0"
+    Write-Host "  2.3.5"
+    Write-Host ""
+
+    exit 1
 }
 
-git -C $ProjectRoot commit -m "Release $Tag"
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to create the release commit."
+
+$Tag = "v$Version"
+
+if (
+    [string]::IsNullOrWhiteSpace(
+        $CommitMessage
+    )
+) {
+    $CommitMessage =
+        "Release $Tag"
 }
 
-git -C $ProjectRoot tag -a $Tag -m "Release $Tag"
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to create Git tag $Tag."
+
+Set-Location $ProjectRoot
+
+
+Write-Host ""
+Write-Host "Preparing release $Tag..." -ForegroundColor Cyan
+Write-Host ""
+
+
+#
+# Verify required commands.
+#
+
+Assert-CommandExists "git"
+Assert-CommandExists "gh"
+
+
+#
+# Verify GitHub CLI authentication.
+#
+
+Write-Host "Checking GitHub CLI authentication..." -ForegroundColor Cyan
+
+gh auth status
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "GitHub CLI is not authenticated. Run 'gh auth login' first."
 }
 
-git -C $ProjectRoot push origin HEAD
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to push the release commit."
+
+#
+# Verify this is a Git repository.
+#
+
+git rev-parse --is-inside-work-tree 2>$null |
+    Out-Null
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "This directory is not a Git repository."
 }
 
-git -C $ProjectRoot push origin $Tag
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to push Git tag $Tag."
+
+#
+# Verify module.json exists.
+#
+
+if (
+    -not (
+        Test-Path $ManifestPath
+    )
+) {
+    throw "module.json was not found at '$ManifestPath'."
 }
 
-$GhArguments = @(
-    "release", "create", $Tag,
-    $ZipPath,
-    $ReleaseManifestPath,
-    "--repo", $GitHubRepository,
-    "--title", "Morelord Character Export $Tag",
-    "--verify-tag"
+
+#
+# Prevent overwriting an existing local tag.
+#
+
+$ExistingLocalTag =
+    git tag --list $Tag
+
+if (
+    $ExistingLocalTag
+) {
+    throw "Git tag '$Tag' already exists locally."
+}
+
+
+#
+# Prevent overwriting an existing remote tag.
+#
+# A non-zero result is expected for a new release.
+#
+
+$PreviousErrorActionPreference =
+    $ErrorActionPreference
+
+$ErrorActionPreference =
+    "SilentlyContinue"
+
+git ls-remote `
+    --exit-code `
+    --tags `
+    origin `
+    "refs/tags/$Tag" `
+    *> $null
+
+$RemoteTagExists =
+    $LASTEXITCODE -eq 0
+
+$ErrorActionPreference =
+    $PreviousErrorActionPreference
+
+
+if (
+    $RemoteTagExists
+) {
+    throw "Git tag '$Tag' already exists on origin."
+}
+
+
+#
+# Prevent overwriting an existing GitHub Release.
+#
+# "Release not found" is expected for a new version.
+#
+
+$PreviousErrorActionPreference =
+    $ErrorActionPreference
+
+$ErrorActionPreference =
+    "SilentlyContinue"
+
+gh release view $Tag `
+    --repo "$GitHubOwner/$GitHubRepo" `
+    *> $null
+
+$ReleaseExists =
+    $LASTEXITCODE -eq 0
+
+$ErrorActionPreference =
+    $PreviousErrorActionPreference
+
+
+if (
+    $ReleaseExists
+) {
+    throw "GitHub Release '$Tag' already exists."
+}
+
+
+#
+# Read module.json.
+#
+
+Write-Host ""
+Write-Host "Updating module.json..." -ForegroundColor Cyan
+
+
+$Manifest =
+    Get-Content `
+        -Path $ManifestPath `
+        -Raw |
+    ConvertFrom-Json
+
+
+$OldVersion =
+    $Manifest.version
+
+
+$DownloadUrl =
+    "https://github.com/$GitHubOwner/$GitHubRepo/releases/download/$Tag/$ArchiveName"
+
+
+Write-Host "  Current version : $OldVersion"
+Write-Host "  Release version : $Version"
+Write-Host "  Download URL    : $DownloadUrl"
+
+
+#
+# Update manifest values.
+#
+
+$Manifest.version =
+    $Version
+
+$Manifest.download =
+    $DownloadUrl
+
+$Manifest.url =
+    "https://github.com/$GitHubOwner/$GitHubRepo"
+
+$Manifest.manifest =
+    "https://raw.githubusercontent.com/$GitHubOwner/$GitHubRepo/main/module.json"
+
+
+#
+# Serialize module.json.
+#
+
+$ManifestJson =
+    $Manifest |
+    ConvertTo-Json -Depth 100
+
+
+#
+# Explicitly write UTF-8 without BOM.
+#
+
+$Utf8NoBom =
+    New-Object System.Text.UTF8Encoding(
+        $false
+    )
+
+[System.IO.File]::WriteAllText(
+    $ManifestPath,
+    $ManifestJson,
+    $Utf8NoBom
 )
 
-if ($ReleaseNotes) {
-    $GhArguments += @("--notes", $ReleaseNotes)
-}
-else {
-    $GhArguments += "--generate-notes"
+
+#
+# Verify encoding and automatically remove a BOM if one somehow exists.
+#
+
+Ensure-Utf8NoBom `
+    -Path $ManifestPath
+
+
+Write-Host ""
+Write-Host "module.json updated." -ForegroundColor Green
+
+
+#
+# Remove previous local archive.
+#
+
+if (
+    Test-Path $ArchivePath
+) {
+    Write-Host ""
+    Write-Host "Removing previous local archive..." -ForegroundColor Cyan
+
+    Remove-Item `
+        $ArchivePath `
+        -Force
 }
 
-if ($Draft) {
-    $GhArguments += "--draft"
+
+#
+# Required release content.
+#
+
+$RequiredPaths = @(
+    "module.json",
+    "README.md",
+    "scripts"
+)
+
+
+#
+# Optional release content.
+#
+
+$OptionalPaths = @(
+    "styles",
+    "templates",
+    "assets",
+    "lang",
+    "LICENSE"
+)
+
+
+#
+# Verify required paths.
+#
+
+foreach (
+    $Path in $RequiredPaths
+) {
+    if (
+        -not (
+            Test-Path (
+                Join-Path `
+                    $ProjectRoot `
+                    $Path
+            )
+        )
+    ) {
+        throw "Required release path '$Path' was not found."
+    }
 }
 
-if ($Prerelease) {
-    $GhArguments += "--prerelease"
+
+#
+# Build complete release path list.
+#
+
+$IncludePaths =
+    @(
+        $RequiredPaths
+    )
+
+
+foreach (
+    $Path in $OptionalPaths
+) {
+    if (
+        Test-Path (
+            Join-Path `
+                $ProjectRoot `
+                $Path
+        )
+    ) {
+        $IncludePaths +=
+            $Path
+    }
 }
 
-& gh @GhArguments
-if ($LASTEXITCODE -ne 0) {
-    throw "GitHub release creation failed. The commit and tag were already pushed; correct the problem and publish the release assets manually if necessary."
+
+#
+# Build ZIP.
+#
+
+Write-Host ""
+Write-Host "Building release archive..." -ForegroundColor Cyan
+
+
+Compress-Archive `
+    -Path $IncludePaths `
+    -DestinationPath $ArchivePath `
+    -CompressionLevel Optimal `
+    -Force
+
+
+Write-Host ""
+Write-Host "Archive created:" -ForegroundColor Green
+Write-Host "  $ArchivePath"
+
+
+#
+# Verify ZIP.
+#
+
+Write-Host ""
+Write-Host "Verifying archive..." -ForegroundColor Cyan
+
+
+Add-Type `
+    -AssemblyName System.IO.Compression.FileSystem
+
+
+$Zip =
+    [System.IO.Compression.ZipFile]::OpenRead(
+        $ArchivePath
+    )
+
+
+try {
+
+    #
+    # Verify module.json exists at ZIP root.
+    #
+
+    $ManifestEntry =
+        $Zip.Entries |
+        Where-Object {
+            $_.FullName -eq "module.json"
+        }
+
+
+    if (
+        -not $ManifestEntry
+    ) {
+        throw "module.json is not located at the root of the ZIP archive."
+    }
+
+
+    #
+    # Read module.json from inside ZIP.
+    #
+
+    $Reader =
+        New-Object System.IO.StreamReader(
+            $ManifestEntry.Open()
+        )
+
+
+    try {
+
+        $ZippedManifestText =
+            $Reader.ReadToEnd()
+
+        $ZippedManifest =
+            $ZippedManifestText |
+            ConvertFrom-Json
+    }
+    finally {
+
+        $Reader.Dispose()
+    }
+
+
+    #
+    # Verify version.
+    #
+
+    if (
+        $ZippedManifest.version -ne
+        $Version
+    ) {
+        throw `
+            "ZIP module.json version '$($ZippedManifest.version)' does not match requested version '$Version'."
+    }
+
+
+    #
+    # Verify download URL.
+    #
+
+    if (
+        $ZippedManifest.download -ne
+        $DownloadUrl
+    ) {
+        throw `
+            "ZIP module.json download URL does not match the expected release URL."
+    }
+
+
+    #
+    # Verify zipped manifest has no BOM.
+    #
+
+    $ManifestStream =
+        $ManifestEntry.Open()
+
+    try {
+
+        $FirstByte =
+            $ManifestStream.ReadByte()
+
+        if (
+            $FirstByte -ne 0x7B
+        ) {
+            throw `
+                "ZIP module.json does not begin with '{'. Possible BOM or invalid encoding."
+        }
+    }
+    finally {
+
+        $ManifestStream.Dispose()
+    }
+
+
+    Write-Host "  module.json found at ZIP root"
+    Write-Host "  version: $($ZippedManifest.version)"
+    Write-Host "  download URL verified"
+    Write-Host "  UTF-8 BOM check passed"
+    Write-Host ""
+    Write-Host "Archive verification successful." -ForegroundColor Green
+}
+finally {
+
+    $Zip.Dispose()
 }
 
-Write-Host "Published GitHub release $Tag" -ForegroundColor Green
-Write-Host "Manifest URL: https://github.com/$GitHubRepository/releases/latest/download/module.json"
+
+#
+# Show Git status.
+#
+
+Write-Host ""
+Write-Host "Git changes:" -ForegroundColor Cyan
+Write-Host ""
+
+git status --short
+
+
+#
+# Stage source changes only.
+#
+# The ZIP is intentionally NOT committed to the repository.
+#
+
+Write-Host ""
+Write-Host "Staging source changes..." -ForegroundColor Cyan
+
+
+git add `
+    module.json `
+    README.md `
+    scripts
+
+
+foreach (
+    $Path in $OptionalPaths
+) {
+    if (
+        Test-Path (
+            Join-Path `
+                $ProjectRoot `
+                $Path
+        )
+    ) {
+        git add $Path
+    }
+}
+
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "git add failed."
+}
+
+
+#
+# Verify there are staged changes.
+#
+
+git diff --cached --quiet
+
+
+if (
+    $LASTEXITCODE -eq 0
+) {
+    throw "No source changes were detected to commit."
+}
+
+
+#
+# Commit source.
+#
+
+Write-Host ""
+Write-Host "Creating Git commit..." -ForegroundColor Cyan
+Write-Host "  $CommitMessage"
+Write-Host ""
+
+
+git commit `
+    -m $CommitMessage
+
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "git commit failed."
+}
+
+
+#
+# Push source.
+#
+
+Write-Host ""
+Write-Host "Pushing source to GitHub..." -ForegroundColor Cyan
+
+
+git push
+
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "git push failed."
+}
+
+
+#
+# Create Git tag.
+#
+
+Write-Host ""
+Write-Host "Creating Git tag $Tag..." -ForegroundColor Cyan
+
+
+git tag `
+    -a $Tag `
+    -m "Release $Tag"
+
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "Failed to create Git tag '$Tag'."
+}
+
+
+#
+# Push Git tag.
+#
+
+Write-Host ""
+Write-Host "Pushing Git tag..." -ForegroundColor Cyan
+
+
+git push origin $Tag
+
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "Failed to push Git tag '$Tag'."
+}
+
+
+#
+# Create GitHub Release and upload ZIP.
+#
+
+Write-Host ""
+Write-Host "Creating GitHub Release..." -ForegroundColor Cyan
+
+
+$ReleaseTitle =
+    "$Tag - Morelord Character Export"
+
+
+$ReleaseNotes = @"
+Morelord Character Export $Tag
+
+See README.md for module documentation and current functionality.
+"@
+
+
+gh release create $Tag `
+    $ArchivePath `
+    --repo "$GitHubOwner/$GitHubRepo" `
+    --title $ReleaseTitle `
+    --notes $ReleaseNotes
+
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "Failed to create GitHub Release '$Tag'."
+}
+
+
+#
+# Verify GitHub Release.
+#
+
+Write-Host ""
+Write-Host "Verifying GitHub Release..." -ForegroundColor Cyan
+
+
+gh release view $Tag `
+    --repo "$GitHubOwner/$GitHubRepo"
+
+
+if (
+    $LASTEXITCODE -ne 0
+) {
+    throw "GitHub Release verification failed."
+}
+
+
+#
+# Finished.
+#
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "Release $Tag completed successfully." -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
+Write-Host ""
+
+Write-Host "Foundry Manifest URL:" -ForegroundColor Yellow
+
+Write-Host `
+    "https://raw.githubusercontent.com/$GitHubOwner/$GitHubRepo/main/module.json"
+
+Write-Host ""
+
+Write-Host "Release download URL:" -ForegroundColor Yellow
+
+Write-Host $DownloadUrl
+
+Write-Host ""
+
+Write-Host "GitHub Release:" -ForegroundColor Yellow
+
+Write-Host `
+    "https://github.com/$GitHubOwner/$GitHubRepo/releases/tag/$Tag"
+
+Write-Host ""
