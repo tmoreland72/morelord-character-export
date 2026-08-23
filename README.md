@@ -17,7 +17,7 @@ The command downloads a portable JSON file intended for the Morelord Character M
 - Foundry VTT v14 support.
 - D&D 5e character Actors only.
 - ApplicationV2 title-bar integration.
-- Complete `Actor#toObject(false)` data, including embedded Items and Active Effects.
+- Complete serializable `Actor#toObject(true)` source data, including embedded Items, item activities, and Active Effects.
 - Display-ready values copied from the live, prepared Actor under `derived`.
 - Deduplicated embedded image library containing:
   - character portrait

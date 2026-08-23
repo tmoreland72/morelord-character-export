@@ -23,7 +23,11 @@ const IMAGE_EXPORT_CONCURRENCY = 4;
 export async function buildCharacterExport(actor) {
   assertExportableActor(actor);
 
-  const actorData = actor.toObject(false);
+  // Export the source representation so embedded DataModel collections (most
+  // importantly D&D5e item activities) remain plain serializable objects.
+  // Prepared values are captured separately in `derived` below.
+  const actorData = actor.toObject(true);
+  serializeItemActivities(actor, actorData);
   const derived = buildDerivedSnapshot(actor);
   const assets = await buildImageAssets(actor);
 
@@ -45,6 +49,36 @@ export async function buildCharacterExport(actor) {
     derived,
     assets
   };
+}
+
+/**
+ * D&D5e 5.3 stores item activities in an ActivityCollection. Its documented
+ * `toObject(source)` method returns the contained activities as plain objects;
+ * restore those objects to the keyed shape used by the ActivitiesField source.
+ *
+ * @param {Actor} actor Prepared Actor document.
+ * @param {object} actorData Serializable Actor source data.
+ */
+function serializeItemActivities(actor, actorData) {
+  const exportedItems = new Map(
+    (actorData.items ?? []).map((item) => [item._id ?? item.id, item])
+  );
+
+  for (const item of actor.items) {
+    const exportedItem = exportedItems.get(item.id);
+    if (!exportedItem?.system) continue;
+
+    const activities = item.system?.activities;
+    if (typeof activities?.toObject !== "function") continue;
+
+    exportedItem.system.activities = Object.fromEntries(
+      activities.toObject(true).map((activity) => {
+        const id = activity._id ?? activity.id;
+        if (!id) throw new Error(`Unable to identify an activity on ${item.name}.`);
+        return [id, activity];
+      })
+    );
+  }
 }
 
 /**
