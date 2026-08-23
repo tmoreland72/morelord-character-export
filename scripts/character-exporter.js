@@ -148,6 +148,7 @@ function buildDerivedSnapshot(actor) {
   const abilities = {};
   const skills = {};
   const tools = {};
+  const items = {};
 
   for (const [key, ability] of Object.entries(system.abilities ?? {})) {
     abilities[key] = compactObject({
@@ -178,6 +179,21 @@ function buildDerivedSnapshot(actor) {
       proficiency: tool.value,
       modifier: firstDefined(tool.mod, tool.total),
       total: firstDefined(tool.total, tool.mod)
+    });
+  }
+
+  for (const item of actor.items) {
+    const activities = {};
+
+    for (const activity of item.system?.activities ?? []) {
+      activities[activity.id] = compactObject({
+        uses: cloneSerializable(activity.uses)
+      });
+    }
+
+    items[item.id] = compactObject({
+      uses: cloneSerializable(item.system?.uses),
+      activities
     });
   }
 
@@ -229,6 +245,7 @@ function buildDerivedSnapshot(actor) {
     abilities,
     skills,
     tools,
+    items,
     passivePerception: system.skills?.prc?.passive,
     spellcasting: compactObject({
       ability: system.attributes?.spellcasting,
