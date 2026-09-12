@@ -156,8 +156,8 @@ function buildDerivedSnapshot(actor) {
       value: ability.value,
       modifier: ability.mod,
       proficiency: ability.proficient,
-      save: firstDefined(ability.save?.total, ability.save),
-      check: firstDefined(ability.check?.total, ability.check?.mod)
+      save: ability.save?.total ?? ability.save ?? undefined,
+      check: ability.check?.total ?? ability.check?.mod ?? undefined
     });
   }
 
@@ -166,8 +166,8 @@ function buildDerivedSnapshot(actor) {
       label: CONFIG.DND5E?.skills?.[key]?.label ?? key,
       ability: skill.ability,
       proficiency: skill.value,
-      modifier: firstDefined(skill.mod, skill.total),
-      total: firstDefined(skill.total, skill.mod),
+      modifier: skill.mod ?? skill.total ?? undefined,
+      total: skill.total ?? skill.mod ?? undefined,
       passive: skill.passive
     });
   }
@@ -177,8 +177,8 @@ function buildDerivedSnapshot(actor) {
       label: CONFIG.DND5E?.toolProficiencies?.[key] ?? key,
       ability: tool.ability,
       proficiency: tool.value,
-      modifier: firstDefined(tool.mod, tool.total),
-      total: firstDefined(tool.total, tool.mod)
+      modifier: tool.mod ?? tool.total ?? undefined,
+      total: tool.total ?? tool.mod ?? undefined
     });
   }
 
@@ -208,21 +208,15 @@ function buildDerivedSnapshot(actor) {
       spellcastingProgression: item.system?.spellcasting?.progression ?? null
     }));
 
-  const totalLevel = firstDefined(
-    system.details?.level,
-    system.details?.level?.value,
-    classes.reduce((total, cls) => total + cls.levels, 0)
-  );
+  const totalLevel = system.details?.level ?? system.details?.level?.value
+    ?? classes.reduce((total, cls) => total + cls.levels, 0);
 
   return compactObject({
     name: actor.name,
     level: totalLevel,
     classes,
     proficiencyBonus: system.attributes?.prof,
-    armorClass: firstDefined(
-      system.attributes?.ac?.value,
-      system.attributes?.ac?.flat
-    ),
+    armorClass: system.attributes?.ac?.value ?? system.attributes?.ac?.flat ?? undefined,
     hitPoints: compactObject({
       value: system.attributes?.hp?.value,
       max: system.attributes?.hp?.max,
@@ -230,14 +224,8 @@ function buildDerivedSnapshot(actor) {
       temporaryMax: system.attributes?.hp?.tempmax
     }),
     initiative: compactObject({
-      total: firstDefined(
-        system.attributes?.init?.total,
-        system.attributes?.init?.mod
-      ),
-      modifier: firstDefined(
-        system.attributes?.init?.mod,
-        system.attributes?.init?.total
-      ),
+      total: system.attributes?.init?.total ?? system.attributes?.init?.mod ?? undefined,
+      modifier: system.attributes?.init?.mod ?? system.attributes?.init?.total ?? undefined,
       bonus: system.attributes?.init?.bonus
     }),
     movement: cloneSerializable(system.attributes?.movement ?? {}),
@@ -250,14 +238,8 @@ function buildDerivedSnapshot(actor) {
     spellcasting: compactObject({
       ability: system.attributes?.spellcasting,
       modifier: system.attributes?.spellmod,
-      attackBonus: firstDefined(
-        system.attributes?.spell?.attack,
-        system.bonuses?.spell?.attack
-      ),
-      saveDC: firstDefined(
-        system.attributes?.spelldc,
-        system.attributes?.spell?.dc
-      ),
+      attackBonus: system.attributes?.spell?.attack ?? system.bonuses?.spell?.attack ?? undefined,
+      saveDC: system.attributes?.spelldc ?? system.attributes?.spell?.dc ?? undefined,
       slots: cloneSerializable(system.spells ?? {})
     })
   });
@@ -343,12 +325,15 @@ async function buildImageAssets(actor) {
 async function exportImageAsset(path, maxDimension, quality) {
   if (!path) return emptyImageAsset(null);
 
-  if (path.startsWith("data:")) {
-    try {
-      const response = await fetch(path);
-      const blob = await response.blob();
-      return await optimizeImageBlob(blob, path, maxDimension, quality);
-    } catch (error) {
+  const isDataUrl = path.startsWith("data:");
+  try {
+    const response = await fetch(path, isDataUrl ? undefined : { credentials: "same-origin" });
+    if (!isDataUrl && !response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
+    }
+    return await optimizeImageBlob(await response.blob(), path, maxDimension, quality);
+  } catch (error) {
+    if (isDataUrl) {
       return {
         path,
         originalMimeType: getDataUrlMimeType(path),
@@ -359,23 +344,6 @@ async function exportImageAsset(path, maxDimension, quality) {
         error: error instanceof Error ? error.message : String(error)
       };
     }
-  }
-
-  try {
-    const response = await fetch(path, { credentials: "same-origin" });
-    if (!response.ok) {
-      throw new Error(
-        `HTTP ${response.status} ${response.statusText}`.trim()
-      );
-    }
-
-    return await optimizeImageBlob(
-      await response.blob(),
-      path,
-      maxDimension,
-      quality
-    );
-  } catch (error) {
     console.warn(`${MODULE_ID} | Could not embed image asset`, path, error);
     return {
       ...emptyImageAsset(path),
@@ -520,12 +488,6 @@ async function mapWithConcurrency(values, concurrency, mapper) {
 function getDataUrlMimeType(value) {
   const match = /^data:([^;,]+)/i.exec(value);
   return match?.[1] ?? null;
-}
-
-function firstDefined(...values) {
-  return values.find(
-    (value) => value !== undefined && value !== null
-  );
 }
 
 function compactObject(value) {
