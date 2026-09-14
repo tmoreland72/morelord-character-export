@@ -135,13 +135,13 @@ Previous versions are available from the repository's GitHub Releases page.
 
 ## Standard release workflow
 
-Character Export uses Core's shared `release.ps1`, with module-specific packaging and publishing values in `release.config.json`. The next prepared release is **0.3.3**; the release script advances `module.json` from 0.3.2 when publishing.
+Character Export uses Core's shared `release.ps1`, with module-specific packaging and publishing values in `release.config.json`. Release examples below use **0.3.4**; the release script advances `module.json` when publishing.
 
 Before publishing:
 
 - Run `node --test test/character-exporter.test.mjs` and syntax-check both files in `scripts/`.
 - Verify export from the supported Foundry v14 D&D 5e and Tidy 5e sheets, then import the file into My Characters using a free website account.
-- Review `RELEASE-NOTES-0.3.3.md` and commit the preparation changes on `main`; the release script requires a clean working tree.
+- Review `RELEASE-NOTES-0.3.4.md` and commit the preparation changes on `main`; the release script requires a clean working tree.
 - Keep `docs/README.md` frontmatter and instructions aligned with the release version. The release script validates this guide and includes `docs/` in the ZIP. The website's product-docs registry and deployment checkouts must include Character Export; a successful website release publication then requests a documentation deployment.
 - Ensure the package is registered with Foundry and GitHub CLI is authenticated (`gh auth login`).
 - Set `RELEASE_PUBLISH_TOKEN` and `FOUNDRY_RELEASE_TOKEN` in the process environment or the ignored project `.env` file. Never commit credentials.
@@ -149,13 +149,13 @@ Before publishing:
 Validate the standard workflow:
 
 ```powershell
-.\release.ps1 -Version 0.3.3 -DryRun
+.\release.ps1 -Version 0.3.4 -DryRun
 ```
 
 Publish when ready:
 
 ```powershell
-.\release.ps1 -Version 0.3.3
+.\release.ps1 -Version 0.3.4
 ```
 
 The workflow validates the repository and release notes, packages only the configured runtime files, validates the ZIP, updates the manifest, commits and tags the release, pushes to GitHub, and publishes to GitHub Releases, Foundry VTT, and the Morelord Gaming release feed. The archive is `morelord-character-export.zip` in the repository root with `module.json` at the ZIP root. The stable installation manifest remains on `main`; Foundry release submissions use the version-tagged manifest.

@@ -3,7 +3,7 @@ title: Morelord Character Export Documentation
 description: Export D&D 5e characters from Foundry and import them into My Characters on Morelord Gaming.
 slug: morelord-character-export
 product: morelord-character-export
-version: 0.3.3
+version: 0.3.4
 audience: all
 foundry: 14
 ---
