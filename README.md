@@ -2,9 +2,11 @@
 
 Morelord Character Export adds a **Morelord Export** command to the title-bar controls of D&D 5e character sheets in Foundry Virtual Tabletop.
 
-The command downloads a portable JSON file intended for the Morelord Character Manager. The export contains the Actor's complete source data, a snapshot of values already prepared by Foundry and D&D 5e, and an embedded image library for character-sheet artwork.
+The command downloads a portable JSON file for import into **My Characters** on the [Morelord Gaming website](https://morelordgaming.com) after registering for a free account. The export contains the Actor's complete source data, a snapshot of values already prepared by Foundry and D&D 5e, and an embedded image library for character-sheet artwork.
 
 ## Compatibility
+
+See the [GM and player guide](docs/README.md) for installation, exporting, importing into My Characters, and troubleshooting. The website publishes this guide at `/docs/morelord-character-export` after its documentation deployment.
 
 - **Foundry VTT:** v14 only.
 - **Game system:** D&D 5e.
@@ -117,46 +119,45 @@ Format version `3` stores all images once and references them by asset ID:
 }
 ```
 
-The raw Actor and embedded Item records retain their original Foundry image paths. The Character Manager should resolve portable images through `assets.references` and `assets.images`, then use the original path or a generic icon only as a fallback.
+The raw Actor and embedded Item records retain their original Foundry image paths. Importers should resolve portable images through `assets.references` and `assets.images`, then use the original path or a generic icon only as a fallback.
 
 ## Installation from Foundry
 
 In Foundry VTT Setup, open **Add-on Modules**, choose **Install Module**, and paste this manifest URL:
 
 ```text
-https://github.com/morelordgaming/morelord-character-export/releases/latest/download/module.json
+https://raw.githubusercontent.com/tmoreland72/morelord-character-export/main/module.json
 ```
 
 After installation, enable **Morelord Character Export** under **Manage Modules** in a D&D 5e world.
 
 Previous versions are available from the repository's GitHub Releases page.
 
-## Creating a release
+## Standard release workflow
 
-The release workflow requires:
+Character Export uses Core's shared `release.ps1`, with module-specific packaging and publishing values in `release.config.json`. The next prepared release is **0.3.3**; the release script advances `module.json` from 0.3.2 when publishing.
 
-- Git
-- GitHub CLI (`gh`)
-- an authenticated GitHub CLI session (`gh auth login`)
-- a clean Git working tree
+Before publishing:
 
-From PowerShell in the repository root, publish a release with:
+- Run `node --test test/character-exporter.test.mjs` and syntax-check both files in `scripts/`.
+- Verify export from the supported Foundry v14 D&D 5e and Tidy 5e sheets, then import the file into My Characters using a free website account.
+- Review `RELEASE-NOTES-0.3.3.md` and commit the preparation changes on `main`; the release script requires a clean working tree.
+- Keep `docs/README.md` frontmatter and instructions aligned with the release version. The release script validates this guide and includes `docs/` in the ZIP. The website's product-docs registry and deployment checkouts must include Character Export; a successful website release publication then requests a documentation deployment.
+- Ensure the package is registered with Foundry and GitHub CLI is authenticated (`gh auth login`).
+- Set `RELEASE_PUBLISH_TOKEN` and `FOUNDRY_RELEASE_TOKEN` in the process environment or the ignored project `.env` file. Never commit credentials.
 
-```powershell
-.\release.ps1 -Version 0.3.1
-```
-
-The script:
-
-1. updates `module.json` with the requested version and version-specific download URL;
-2. writes and validates `module.json` as UTF-8 without a byte-order mark;
-3. builds `release/morelord-character-export.zip` with `module.json` at the ZIP root;
-4. copies the standalone release manifest to `release/module.json`;
-5. commits the version change, creates and pushes the Git tag;
-6. publishes both assets to a GitHub Release.
-
-To validate and build the package without changing Git or publishing a release:
+Validate the standard workflow:
 
 ```powershell
-.\release.ps1 -Version 0.3.1 -BuildOnly
+.\release.ps1 -Version 0.3.3 -DryRun
 ```
+
+Publish when ready:
+
+```powershell
+.\release.ps1 -Version 0.3.3
+```
+
+The workflow validates the repository and release notes, packages only the configured runtime files, validates the ZIP, updates the manifest, commits and tags the release, pushes to GitHub, and publishes to GitHub Releases, Foundry VTT, and the Morelord Gaming release feed. The archive is `morelord-character-export.zip` in the repository root with `module.json` at the ZIP root. The stable installation manifest remains on `main`; Foundry release submissions use the version-tagged manifest.
+
+`-DryRun` validates a temporary archive without publishing or advancing the source manifest; it still requires a clean repository, remote access, and publishing token configuration. For local packaging checks without publishing credentials, use `-SkipWebsitePublish -SkipFoundryPublish` with `-DryRun`. Draft and prerelease modes skip Foundry and the public website feed. Use `-WebsiteOnly` only to retry the website step after the GitHub release exists.

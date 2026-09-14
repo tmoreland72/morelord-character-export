@@ -9,5 +9,8 @@ release/
 Thumbs.db
 
 # Logs and temporary files
+.env
+.env.*
+!.env.example
 *.log
 *.tmp

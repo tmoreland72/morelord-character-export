@@ -1,0 +1,14 @@
+{
+  "moduleId": "morelord-character-export",
+  "moduleTitle": "Morelord Character Export",
+  "productSlug": "morelord-character-export",
+  "githubOwner": "tmoreland72",
+  "githubRepo": "morelord-character-export",
+  "releaseBranch": "main",
+  "archiveName": "morelord-character-export.zip",
+  "websiteUrl": "https://morelordgaming.com",
+  "productDocumentationPath": "docs/README.md",
+  "documentationWebsiteRepository": "tmoreland72/morelord-gaming-web",
+  "requiredPaths": ["module.json", "README.md", "docs", "scripts", "LICENSE"],
+  "optionalPaths": ["CHANGELOG.md"]
+}

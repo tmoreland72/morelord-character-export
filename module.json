@@ -1,7 +1,7 @@
 {
   "id": "morelord-character-export",
   "title": "Morelord Character Export",
-  "description": "Exports D&D 5e character actors to a portable JSON format for the Morelord Character Manager.",
+  "description": "Exports D&D 5e characters to portable JSON for import into My Characters on the Morelord Gaming website with a free account.",
   "version": "0.3.2",
   "authors": [
     {
