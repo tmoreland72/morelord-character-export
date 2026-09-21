@@ -1,5 +1,7 @@
 # Morelord Character Export
 
+Optional reporting: when Core is active and the GM explicitly enables reporting, export attempts, completed exports and sanitized errors can be reported without account linking. Core remains optional. See [Core telemetry](../morelord-core/TELEMETRY.md) for privacy and deployment requirements.
+
 Morelord Character Export adds a **Morelord Export** command to the title-bar controls of D&D 5e character sheets in Foundry Virtual Tabletop.
 
 The command downloads a portable JSON file for import into **My Characters** on the [Morelord Gaming website](https://morelordgaming.com) after registering for a free account. The export contains the Actor's complete source data, a snapshot of values already prepared by Foundry and D&D 5e, and an embedded image library for character-sheet artwork.

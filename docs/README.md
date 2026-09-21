@@ -3,7 +3,7 @@ title: Morelord Character Export Documentation
 description: Export D&D 5e characters from Foundry and import them into My Characters on Morelord Gaming.
 slug: morelord-character-export
 product: morelord-character-export
-version: 0.3.4
+version: 0.3.5
 audience: all
 foundry: 14
 ---
@@ -16,7 +16,7 @@ Morelord Character Export lets GMs and players download a D&D 5e character from 
 
 Exporting from Foundry does not require Morelord Core, a Morelord account connection, or a paid subscription. To import the file on the website, register for a free Morelord Gaming account and sign in.
 
-This guide covers version 0.3.3. Exports are snapshots: later changes in Foundry do not automatically update the imported character.
+This guide covers version 0.3.5. Exports are snapshots: later changes in Foundry do not automatically update the imported character.
 
 ## Requirements
 

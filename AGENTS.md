@@ -30,6 +30,7 @@
 
 ## Verification
 
+- Every in-game bug fix must include a repeatable in-game regression test that reproduces the bug and verifies the corrected behavior. Follow Core's `IN-GAME-TESTING.md`, reuse its shared runner, and keep module-specific tests in the owning module. Run the test in Foundry and report the result or any verification blocker.
 - When changing Core, identify and check the modules that consume the changed functionality.
 - Run relevant existing tests and, for shared UI changes, Core's `npm run check:design-system`. Clearly report anything that still needs live Foundry verification.
 
@@ -39,10 +40,15 @@
 
 - Follow the affected repository's documented `release.ps1` workflow, `release.config.json`, and release-note conventions when preparing or publishing a requested release.
 - For every release, check the latest stable Foundry VTT version against official release information and verify module compatibility on that version. Update `module.json`'s `compatibility.verified` to the exact verified version/build before packaging, and publish matching compatibility metadata to the Foundry package release. Preserve supported minimum/maximum bounds unless intentionally changing support; do not claim untested compatibility. After publishing, verify the public manifest and Foundry release listing both reflect the updated compatibility, so stale metadata does not leave users with a compatibility-risk warning. Report any verification or publication blocker explicitly.
-- Character Export follows the standard release requirements. Downtime remains excluded from standard release requirements until production-ready; all modules must follow shared UI and Core asset standards.
+- Character Export and Downtime follow the standard release requirements; all modules must follow shared UI and Core asset standards.
 - As part of every code change, review affected documentation and update it when behavior, UI, settings, APIs, dependencies, or workflows change. Include relevant READMEs, user guides, API examples, and release notes; update shared documentation in Core when applicable.
 - Keep public documentation aligned with actual implemented behavior and compatibility. Documentation review is part of completing the change, not something deferred until release.
 - In the completion summary, identify documentation updated or state why no update was needed.
+
+## Demo videos
+
+- Before planning, scripting, recording, editing, or exporting any Morelord demo video, read and follow Core's `DEMO-RECORDING-GUIDE.md`. Resolve it from the Core repository in the workspace (normally `../morelord-core`; in this installation, `E:/Foundry14Dev-Data/Data/modules/morelord-core` also serves Compendium in the separate DND data tree).
+- Save reusable demo instructions and corrections from the user in that guide; keep video-specific requirements in the video's brief. Check the finished video against those requirements before delivery.
 
 ## Maintaining these guidelines
 

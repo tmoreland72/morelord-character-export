@@ -88,14 +88,23 @@ function serializeItemActivities(actor, actorData) {
  * @returns {Promise<object>} The exported payload.
  */
 export async function exportCharacter(actor) {
-  const payload = await buildCharacterExport(actor);
-  const filename = `${sanitizeFilename(actor.name)}.morelord-character.json`;
-  const json = JSON.stringify(payload, null, 2);
+  const telemetry = globalThis.MorelordCore?.telemetry;
+  telemetry?.track("morelord-character-export", "export.attempted");
+  try {
+    const payload = await buildCharacterExport(actor);
+    const filename = `${sanitizeFilename(actor.name)}.morelord-character.json`;
+    const json = JSON.stringify(payload, null, 2);
 
-  saveDataToFile(json, "application/json", filename);
-  ui.notifications.info(`Exported ${actor.name} to ${filename}.`);
+    saveDataToFile(json, "application/json", filename);
+    telemetry?.track("morelord-character-export", "export.completed");
+    ui.notifications.info(`Exported ${actor.name} to ${filename}.`);
 
-  return payload;
+    return payload;
+  } catch (error) {
+    telemetry?.error("morelord-character-export", "export", error);
+    telemetry?.track("morelord-character-export", "export.failed");
+    throw error;
+  }
 }
 
 /**
