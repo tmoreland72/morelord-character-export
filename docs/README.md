@@ -14,7 +14,7 @@ foundry: 14
 
 Morelord Character Export lets GMs and players download a D&D 5e character from Foundry Virtual Tabletop and import it into **My Characters** on the Morelord Gaming website. The file includes character data, a snapshot of prepared sheet values, and available character and item artwork.
 
-Exporting from Foundry does not require Morelord Core, a Morelord account connection, or a paid subscription. To import the file on the website, register for a free Morelord Gaming account and sign in.
+Exporting from Foundry does not require Morelord Core, a Morelord Gaming account connection, or a paid subscription. To import the file on the website, register for a free Morelord Gaming account and sign in.
 
 This guide covers version 0.3.5. Exports are snapshots: later changes in Foundry do not automatically update the imported character.
 
