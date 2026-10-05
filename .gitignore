@@ -14,3 +14,6 @@ Thumbs.db
 !.env.example
 *.log
 *.tmp
+
+# Local working files
+/tmp/

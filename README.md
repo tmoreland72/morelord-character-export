@@ -143,7 +143,7 @@ Before publishing:
 
 - Run `node --test test/character-exporter.test.mjs` and syntax-check both files in `scripts/`.
 - Verify export from the supported Foundry v14 D&D 5e and Tidy 5e sheets, then import the file into My Characters using a free website account.
-- Review `RELEASE-NOTES-0.3.4.md` and commit the preparation changes on `main`; the release script requires a clean working tree.
+- Review `release-notes/RELEASE-NOTES-0.3.4.md` and commit the preparation changes on `main`; the release script requires a clean working tree.
 - Keep `docs/README.md` frontmatter and instructions aligned with the release version. The release script validates this guide and includes `docs/` in the ZIP. The website's product-docs registry and deployment checkouts must include Character Export; a successful website release publication then requests a documentation deployment.
 - Ensure the package is registered with Foundry and GitHub CLI is authenticated (`gh auth login`).
 - Set `RELEASE_PUBLISH_TOKEN` and `FOUNDRY_RELEASE_TOKEN` in the process environment or the ignored project `.env` file. Never commit credentials.
@@ -163,3 +163,5 @@ Publish when ready:
 The workflow validates the repository and release notes, packages only the configured runtime files, validates the ZIP, updates the manifest, commits and tags the release, pushes to GitHub, and publishes to GitHub Releases, Foundry VTT, and the Morelord Gaming release feed. The archive is `morelord-character-export.zip` in the repository root with `module.json` at the ZIP root. The stable installation manifest remains on `main`; Foundry release submissions use the version-tagged manifest.
 
 `-DryRun` validates a temporary archive without publishing or advancing the source manifest; it still requires a clean repository, remote access, and publishing token configuration. For local packaging checks without publishing credentials, use `-SkipWebsitePublish -SkipFoundryPublish` with `-DryRun`. Draft and prerelease modes skip Foundry and the public website feed. Use `-WebsiteOnly` only to retry the website step after the GitHub release exists.
+
+Release history lives in `release-notes/`; Foundry links to the GitHub Releases page through the manifest `changelog` URL. Use the module-local `/tmp/` directory for working files; it is ignored by Git and excluded from release packages.
