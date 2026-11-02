@@ -137,32 +137,32 @@ Previous versions are available from the repository's GitHub Releases page.
 
 ## Standard release workflow
 
-Character Export uses Core's shared `release.ps1`, with module-specific packaging and publishing values in `release.config.json`. Release examples below use **0.3.4**; the release script advances `module.json` when publishing.
+Character Export publishes with the **Release** workflow, `.github/workflows/release.yml`, dispatched from `main`. It runs `release.ps1` under PowerShell on `ubuntu-latest` and passes the repository secrets `FOUNDRY_RELEASE_TOKEN` and `RELEASE_PUBLISH_TOKEN`. One normal run creates the GitHub Release, publishes the Foundry VTT package, and publishes the Morelord Gaming release feed. It does not run in-Foundry tests. The website release feed announces the release. See [RELEASING.md](RELEASING.md).
 
-Before publishing:
+Inputs are `bump` (`patch`, `minor`, or `major`), an optional `version` (`x.y.z`), and `publish_only`. An empty `version` uses `bump`. `publish_only` republishes an existing version to the website and then to Foundry, and does not create a commit, tag, or GitHub Release.
 
-- Run `node --test test/character-exporter.test.mjs` and syntax-check both files in `scripts/`.
+```bash
+gh workflow run release.yml -f version=X.Y.Z
+```
+
+Module-specific packaging and publishing values live in `release.config.json`. `releaseBranch` is `main`.
+
+Before a normal release:
+
+- Run `node --test test/`.
 - Verify export from the supported Foundry v14 D&D 5e and Tidy 5e sheets, then import the file into My Characters using a free website account.
-- Review `release-notes/RELEASE-NOTES-<version>.md` and commit the preparation changes on `main`; the release script requires a clean working tree. Per-version notes stay out of the ZIP. `release.ps1` rebuilds the root `CHANGELOG.md` from those notes before packaging and stages it with `module.json`.
+- Review `release-notes/RELEASE-NOTES-<version>.md` and commit the preparation changes on `main`. The release script requires a clean working tree. Per-version notes stay out of the ZIP. `release.ps1` rebuilds the root `CHANGELOG.md` from those notes before packaging and commits it with `module.json`.
 - Keep `docs/README.md` frontmatter and instructions aligned with the release version. The release script validates this guide and includes `docs/` in the ZIP. The website's product-docs registry and deployment checkouts must include Character Export; a successful website release publication then requests a documentation deployment.
-- Ensure the package is registered with Foundry and GitHub CLI is authenticated (`gh auth login`).
-- Set `RELEASE_PUBLISH_TOKEN` and `FOUNDRY_RELEASE_TOKEN` in the process environment or the ignored project `.env` file. Never commit credentials.
 
-Validate the standard workflow:
+The workflow validates the repository and release notes, rebuilds `CHANGELOG.md`, packages only the configured runtime files, validates the ZIP, updates the manifest, commits and tags the release, pushes to GitHub, and publishes to GitHub Releases, Foundry VTT, and the Morelord Gaming release feed. The release commit stages `module.json` and `CHANGELOG.md`. The archive is `morelord-character-export.zip` in the repository root with `module.json` and `CHANGELOG.md` at the ZIP root. The stable installation manifest remains on `main`; Foundry release submissions use the version-tagged manifest. The workflow does not pass `-SkipFoundryPublish` or `-SkipWebsitePublish`.
+
+Local checks do not publish:
 
 ```powershell
-.\release.ps1 -Version 0.3.4 -DryRun
+.\release.ps1 -Version x.y.z -DryRun
 .\release.ps1 -ValidateOnly
 ```
 
-Publish when ready:
-
-```powershell
-.\release.ps1 -Version 0.3.4
-```
-
-The workflow validates the repository and release notes, rebuilds `CHANGELOG.md`, packages only the configured runtime files, validates the ZIP, updates the manifest, commits and tags the release, pushes to GitHub, and publishes to GitHub Releases, Foundry VTT, and the Morelord Gaming release feed. The release commit stages `module.json` and `CHANGELOG.md`. The archive is `morelord-character-export.zip` in the repository root with `module.json` and `CHANGELOG.md` at the ZIP root. The stable installation manifest remains on `main`; Foundry release submissions use the version-tagged manifest.
-
-`-DryRun` validates a temporary archive without publishing or advancing the source manifest; it still requires a clean repository, remote access, and publishing token configuration. For local packaging checks without publishing credentials, use `-SkipWebsitePublish -SkipFoundryPublish` with `-DryRun`. `-ValidateOnly` checks the current `module.json` version on the local branch, including that `CHANGELOG.md` matches `release-notes/`, and validates the archive without fetching or publishing. When `CHANGELOG.md` is already current, `-ValidateOnly` and `-DryRun` leave the working tree unchanged. Draft and prerelease modes skip Foundry and the public website feed. Use `-WebsiteOnly` only to retry the website step after the GitHub release exists.
+`-DryRun` validates a temporary archive without publishing or advancing the source manifest; it still requires a clean repository, remote access, and publishing token configuration. For local packaging checks without publishing credentials, use `-SkipWebsitePublish -SkipFoundryPublish` with `-DryRun`. `-ValidateOnly` checks the current `module.json` version on the local branch, including that `CHANGELOG.md` matches `release-notes/`, and validates the archive without fetching or publishing. When `CHANGELOG.md` is already current, `-ValidateOnly` and `-DryRun` leave the working tree unchanged. Draft and prerelease modes skip Foundry and the public website feed. `-WebsiteOnly` and `-FoundryOnly` republish an existing version. They do not commit, tag, or create a GitHub Release. `publish_only` runs those two steps in that order.
 
 Per-version release notes live in `release-notes/` and are excluded from the package. The packaged `CHANGELOG.md` is the cumulative history (newest version first) for GitHub and in-Foundry changelog viewers. Foundry links to the GitHub Releases page through the manifest `changelog` URL. Use the module-local `/tmp/` directory for working files; it is ignored by Git and excluded from release packages.
