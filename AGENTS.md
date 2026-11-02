@@ -3,14 +3,15 @@
 ## Hard rules
 
 - HARD RULE: Use D&D 5e 2024 rules (SRD 5.2) only. Never use or add 2014 rules, never add a 2014/2024 rules-version switch or detection, and use 2024 terms and mechanics in code, data, UI text and docs.
+- HARD RULE: Always use morelord-core's global features (shared CSS, UI components, helper functions, settings, APIs) instead of building module-local versions. For every new feature, consider whether its CSS, UI component or helper should live in Core so other modules can share it; if so, ask the Core owner (Core Bot) to add it to Core, then use it from Core. This repo never edits Core directly.
 - All module settings are world-scoped and GM-only unless Troy says otherwise.
 
 ## Shared assets in Morelord Core
 
-- During every Morelord coding task, actively look for opportunities to reuse or create shared assets in Morelord Core, including UI components, CSS, design tokens, templates, functions, utilities, and services.
+- During every Morelord coding task, actively look for opportunities to reuse shared assets in Morelord Core, including UI components, CSS, design tokens, templates, functions, utilities, and services.
 - Before adding module-specific code or styles, inspect Morelord Core for an existing asset that can be reused or extended.
-- When functionality or styling is useful across multiple Morelord modules, place the shared implementation in Morelord Core and have the modules consume it instead of duplicating it.
-- When touching duplicated code or styles, consider consolidating them in Morelord Core as part of the relevant change.
+- When functionality or styling is useful across multiple Morelord modules, ask the Core owner (Core Bot) to add the shared implementation to Morelord Core and have the modules consume it instead of duplicating it.
+- When touching duplicated code or styles, consider asking the Core owner (Core Bot) to consolidate them in Morelord Core as part of the relevant change.
 - Keep shared assets simple and focused on demonstrated needs. Keep behavior specific to one module in that module unless there is a clear shared use case.
 - Preserve compatibility for existing consumers when changing shared assets, and check the affected modules.
 - In the completion summary, briefly identify shared assets reused, extended, or introduced when relevant.
@@ -20,7 +21,7 @@
 - ALL Foundry UI in every Morelord module MUST use Core's shared components, styles, tokens, and UI functions. This applies to new and existing windows, dialogs, forms, cards, lists, chat output, and sheet integrations, including prototypes and unreleased modules.
 - Before UI work, read Morelord Core's `MORELORD-BRAND-GUIDE.md` (in Core's repository, or `../morelord-core/MORELORD-BRAND-GUIDE.md` from sibling module repositories).
 - Use the appropriate Core component with its required markup, classes, and behavior. Adding `ml-*` classes or Core tokens to independently designed markup is not sufficient. Core is the source of truth; another module is only an example of consuming it, not a design system to copy.
-- Do not recreate, override, or patch shared UI in a feature module. If Core lacks a needed shared component or its component does not work correctly, add or fix it in Core, preserve existing consumers, and have the feature module consume that implementation.
+- Do not recreate, override, or patch shared UI in a feature module. If Core lacks a needed shared component or its component does not work correctly, ask the Core owner (Core Bot) to add or fix it in Core, preserve existing consumers, and have the feature module consume that implementation.
 - Module-specific UI code may implement domain-specific layout and behavior only. Shared typography, surfaces, controls, spacing, states, and window behavior remain owned by Core. Ensure Core's assets and required UI initialization are actually loaded; do not compensate for missing integration with local styling.
 - Verify the rendered UI with Foundry and Core styles loaded, including relevant interactions and responsive behavior. Passing a class-name or design-system scan alone does not establish compliance. Report any live Foundry verification still outstanding.
 
