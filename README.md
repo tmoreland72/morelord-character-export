@@ -149,7 +149,7 @@ Module-specific packaging and publishing values live in `release.config.json`. `
 
 Before a normal release:
 
-- Run `node --test test/`.
+- Run `node --test test/*.mjs`.
 - Verify export from the supported Foundry v14 D&D 5e and Tidy 5e sheets, then import the file into My Characters using a free website account.
 - Review `release-notes/RELEASE-NOTES-<version>.md` and commit the preparation changes on `main`. The release script requires a clean working tree. Per-version notes stay out of the ZIP. `release.ps1` rebuilds the root `CHANGELOG.md` from those notes before packaging and commits it with `module.json`.
 - Keep `docs/README.md` frontmatter and instructions aligned with the release version. The release script validates this guide and includes `docs/` in the ZIP. The website's product-docs registry and deployment checkouts must include Character Export; a successful website release publication then requests a documentation deployment.
