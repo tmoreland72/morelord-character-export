@@ -95,7 +95,7 @@ jobs:
 
       - name: Run unit tests
         if: ${{ inputs.publish_only == false }}
-        run: node --test test/
+        run: node --test test/*.mjs
 
       - name: Resolve release version
         id: version
