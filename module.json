@@ -28,6 +28,13 @@
   "esmodules": [
     "scripts/main.js"
   ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
   "url": "https://github.com/tmoreland72/morelord-character-export",
   "changelog": "https://github.com/tmoreland72/morelord-character-export/releases",
   "manifest": "https://raw.githubusercontent.com/tmoreland72/morelord-character-export/main/module.json",

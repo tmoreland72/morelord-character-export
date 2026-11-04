@@ -37,9 +37,30 @@ https://raw.githubusercontent.com/tmoreland72/morelord-character-export/main/mod
 
 ## Export a character
 
+From a character sheet:
+
 1. Open the character's sheet.
 2. Choose **Morelord Export** from the sheet's title-bar controls.
 3. Wait for the export notification and save the downloaded JSON file.
+
+**Morelord Export** downloads immediately. It does not open a window.
+
+A macro can open the **Export Character** window instead:
+
+```js
+game.modules.get("morelord-character-export").api.open();
+```
+
+With no argument, the window uses the selected token's character. If no token is selected, it uses the user's assigned character. Pass an Actor to export that character: `open(actor)`.
+
+The window shows the character's portrait and name.
+
+- **Export JSON** downloads the file and closes the window.
+- **Cancel** closes the window without exporting.
+
+If no exportable character is available, Foundry shows: "Select a character token or assign a character before exporting." `open` then returns no window.
+
+When Morelord Core is enabled, the portrait and window use Core's styling. Export works when Core is not installed.
 
 The filename follows the pattern `character-name.morelord-character.json`. The export does not change the Foundry character.
 
@@ -77,6 +98,6 @@ Check Foundry's notification and browser console for the export error. Use the J
 
 ## Macro and format reference
 
-Macros can call `game.modules.get("morelord-character-export").api.exportCharacter(actor)` or `exportActorByUuid(uuid)`. The same character and permission checks apply. `buildCharacterExport(actor)` returns the export payload without downloading it.
+Macros can open the **Export Character** window with `game.modules.get("morelord-character-export").api.open(actor)`, or call `exportCharacter(actor)` and `exportActorByUuid(uuid)` directly. The same character and permission checks apply. `buildCharacterExport(actor)` returns the export payload without downloading it.
 
 The current format is `morelord-character`, version `3`, with `actor`, `derived`, and `assets` sections. Full macro examples and a format sample are in the [repository README](https://github.com/tmoreland72/morelord-character-export#macro-api).

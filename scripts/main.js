@@ -4,6 +4,7 @@ import {
   getActorFromApplication,
   isExportableActor
 } from "./character-exporter.js";
+import { open } from "./export-app.js";
 
 const MODULE_ID = "morelord-character-export";
 const CONTROL_NAME = "morelord-character-export";
@@ -34,7 +35,8 @@ Hooks.once("ready", () => {
     exportActorByUuid: async (uuid) => {
       const actor = await fromUuid(uuid);
       return exportCharacter(actor);
-    }
+    },
+    open
   };
 
   console.log(`${MODULE_ID} | Ready`);

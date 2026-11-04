@@ -30,6 +30,7 @@ See the [GM and player guide](docs/README.md) for installation, exporting, impor
 - Item IDs mapped directly to their embedded image asset IDs.
 - Images resized and converted to WebP when possible.
 - Public API for macros and development testing.
+- **Export Character** window for macros, using a chosen Actor, the selected token, or the assigned character.
 - Exact Foundry and D&D 5e system versions recorded in every export.
 
 ## Installation during development
@@ -55,6 +56,17 @@ character-name.morelord-character.json
 ```
 
 ## Macro API
+
+Open the **Export Character** window. With no argument, the window uses the selected token's Actor, then the user's assigned character:
+
+```js
+game.modules.get("morelord-character-export").api.open();
+game.modules.get("morelord-character-export").api.open(actor);
+```
+
+The window shows that character's portrait and name. **Export JSON** downloads the file and closes the window. **Cancel** closes it without exporting. `open` returns the window, or `null` after a warning when none of the Actor, the selected token, or the assigned character is an exportable D&D 5e character. When Morelord Core is active, the window uses Core's character identity and window styling. Core is not required.
+
+The sheet command **Morelord Export** still downloads immediately and does not open this window.
 
 Export an Actor directly:
 

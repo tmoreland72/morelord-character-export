@@ -1,0 +1,12 @@
+<section{{#if core}} class="ml-app ml-app-shell ml-character-export"{{/if}}>
+  {{#if identity}}
+    {{{identity}}}
+  {{else}}
+    <img src="{{img}}" alt="" width="48" height="48">
+    <span>{{name}}</span>
+  {{/if}}
+  <footer{{#if core}} class="ml-form-footer"{{/if}}>
+    <button type="button" data-action="cancel">{{localize "morelord-character-export.window.cancel"}}</button>
+    <button type="button" data-action="export">{{localize "morelord-character-export.window.export"}}</button>
+  </footer>
+</section>

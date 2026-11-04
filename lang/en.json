@@ -1,0 +1,6 @@
+{
+  "morelord-character-export.window.title": "Export Character",
+  "morelord-character-export.window.export": "Export JSON",
+  "morelord-character-export.window.cancel": "Cancel",
+  "morelord-character-export.window.noActor": "Select a character token or assign a character before exporting."
+}
