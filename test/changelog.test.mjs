@@ -70,7 +70,7 @@ test("root CHANGELOG.md matches release notes for in-Foundry viewers", () => {
   assert.equal(changelog.includes("Foundry VTT v14 only"), false);
   assert.deepEqual(
     [...changelog.matchAll(/^## (\d+\.\d+\.\d+)$/gm)].map(match => match[1]),
-    ["0.3.6", "0.3.5", "0.3.4", "0.3.3"]
+    ["0.3.7", "0.3.6", "0.3.5", "0.3.4", "0.3.3"]
   );
   for (const line of changelog.split("\n")) {
     if (/^#{1,6}/.test(line)) assert.match(line, /^#{1,6} /);
