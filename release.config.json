@@ -8,7 +8,6 @@
   "archiveName": "morelord-character-export.zip",
   "websiteUrl": "https://morelordgaming.com",
   "productDocumentationPath": "docs/README.md",
-  "documentationWebsiteRepository": "tmoreland72/morelord-gaming-web",
   "requiredPaths": ["module.json", "README.md", "CHANGELOG.md", "docs", "scripts", "LICENSE"],
   "optionalPaths": []
 }

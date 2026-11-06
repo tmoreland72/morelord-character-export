@@ -11,6 +11,20 @@ foreach ($name in @('Version', 'WebsiteOnly', 'FoundryOnly', 'SkipWebsitePublish
     if ($parameterNames -notcontains $name) { throw "release.ps1 is missing -$name." }
 }
 
+# The documentation repository_dispatch to morelord-gaming-web returns HTTP 403 and fails the Release run. Keep it out of the workflow, config, and script.
+$releaseText = Get-Content -LiteralPath $releaseScript -Raw
+foreach ($forbidden in @('Request-DocumentationDeployment', 'documentationWebsiteRepository', 'product-docs-updated', 'morelord-gaming-web')) {
+    if ($releaseText.Contains($forbidden)) { throw "release.ps1 must not contain '$forbidden'." }
+}
+$configText = Get-Content -LiteralPath (Join-Path $ProjectRoot 'release.config.json') -Raw
+foreach ($forbidden in @('documentationWebsiteRepository', 'morelord-gaming-web', 'repository_dispatch', 'product-docs-updated')) {
+    if ($configText.Contains($forbidden)) { throw "release.config.json must not contain '$forbidden'." }
+}
+$workflowText = Get-Content -LiteralPath (Join-Path $ProjectRoot '.github/workflows/release.yml') -Raw
+foreach ($forbidden in @('repository_dispatch', 'morelord-gaming-web', 'product-docs-updated', 'documentationWebsiteRepository')) {
+    if ($workflowText.Contains($forbidden)) { throw ".github/workflows/release.yml must not contain '$forbidden'." }
+}
+
 $fixture = Join-Path (Join-Path $ProjectRoot 'tmp') ('resolve-version-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 try {
