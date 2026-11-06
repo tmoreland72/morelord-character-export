@@ -8,7 +8,7 @@ The command downloads a portable JSON file for import into **My Characters** on 
 
 ## Compatibility
 
-See the [GM and player guide](docs/README.md) for installation, exporting, importing into My Characters, and troubleshooting. The website publishes this guide at `/docs/morelord-character-export` after its documentation deployment.
+See the [GM and player guide](docs/README.md) for installation, exporting, importing into My Characters, and troubleshooting.
 
 - **Foundry VTT:** v14 only.
 - **Game system:** D&D 5e.
@@ -152,7 +152,7 @@ Before a normal release:
 - Run `node --test test/*.mjs`.
 - Verify export from the supported Foundry v14 D&D 5e and Tidy 5e sheets, then import the file into My Characters using a free website account.
 - Review `release-notes/RELEASE-NOTES-<version>.md` and commit the preparation changes on `main`. The release script requires a clean working tree. Per-version notes stay out of the ZIP. `release.ps1` rebuilds the root `CHANGELOG.md` from those notes before packaging and commits it with `module.json`.
-- Keep `docs/README.md` frontmatter and instructions aligned with the release version. The release script validates this guide and includes `docs/` in the ZIP. The website's product-docs registry and deployment checkouts must include Character Export; a successful website release publication then requests a documentation deployment.
+- Keep `docs/README.md` frontmatter and instructions aligned with the release version. The release script validates this guide and includes `docs/` in the ZIP. The release leaves documentation deployment out: it has no `documentationWebsiteRepository` setting and sends no `repository_dispatch` to `tmorelord72/morelord-gaming-web`. Leave that dispatch out. The call returns HTTP 403 and fails the run after GitHub, Foundry, and the website feed have already published.
 
 The workflow validates the repository and release notes, rebuilds `CHANGELOG.md`, packages only the configured runtime files, validates the ZIP, updates the manifest, commits and tags the release, pushes to GitHub, and publishes to GitHub Releases, Foundry VTT, and the Morelord Gaming release feed. The release commit stages `module.json` and `CHANGELOG.md`. The archive is `morelord-character-export.zip` in the repository root with `module.json` and `CHANGELOG.md` at the ZIP root. The stable installation manifest remains on `main`; Foundry release submissions use the version-tagged manifest. The workflow does not pass `-SkipFoundryPublish` or `-SkipWebsitePublish`.
 

@@ -33,6 +33,8 @@ With `module.json` at `0.3.6` and no explicit version, the bumps are:
 
 A normal release still needs `release-notes/RELEASE-NOTES-<version>.md` and `docs/README.md` frontmatter for that version before the dispatch. `release.ps1` creates the commit, tag, GitHub Release, website record, and Foundry release. It does not pass `-SkipFoundryPublish` or `-SkipWebsitePublish`.
 
+`release.ps1` validates `docs/README.md` and packages `docs/` in the ZIP. Documentation deployment stays outside this release. `release.config.json` has no `documentationWebsiteRepository` setting, and neither the workflow nor `release.ps1` sends a `repository_dispatch` to `tmorelord72/morelord-gaming-web`. Leave that dispatch out. The cross-repository call returns HTTP 403 and fails the run after GitHub, Foundry, and the website feed have already published.
+
 ## Changelog
 
 Per-version release notes live in `release-notes/RELEASE-NOTES-<version>.md`. Those files are excluded from release archives. Every release maintains a cumulative root `CHANGELOG.md`: newest version first, `#`/`##`/`###` headings with a space after `#`, `- ` bullets, and no `---` horizontal rules. `release.ps1` rebuilds that file from the `## What Changed` sections in `release-notes/RELEASE-NOTES-*.md` before it stages the archive, and omits `## Verification` and other sections outside `## What Changed`. It then commits `CHANGELOG.md` with `module.json` (`git add -- module.json CHANGELOG.md`).
